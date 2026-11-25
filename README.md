@@ -68,8 +68,8 @@ S3 endpoint:  http://127.0.0.1:8333
 Root token:   root
 ```
 
-Prebuilt binaries are in `bin/` (Windows, Linux, macOS Apple silicon). On Windows
-(PowerShell), no Go install needed:
+On Windows (PowerShell), build once with `go build -o bin\coffer.exe .\cmd\coffer`
+(or use a prebuilt `bin\coffer.exe` from the release zip), then:
 
 ```powershell
 .\bin\coffer.exe server -dev -dev-root-token=root

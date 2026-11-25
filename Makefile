@@ -15,7 +15,7 @@ race:
 	go test -race -count=1 ./...
 
 dev: build
-	./bin/$(BINARY) server -dev -dev.root-token=root -dir=./coffer-dev
+	./bin/$(BINARY) server -dev -dev-root-token=root -dir=./coffer-dev
 
 cross:
 	GOOS=linux   GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags "$(LDFLAGS)" -o bin/$(BINARY)-linux-amd64 ./cmd/coffer

@@ -358,6 +358,12 @@ func (s *Server) devInit() error {
 		if err != nil {
 			return err
 		}
+		if old, err := os.ReadFile(keyFile); err == nil {
+			// never lose a previous dev key: a snapshot taken earlier still needs it
+			bak := fmt.Sprintf("%s.bak-%d", keyFile, time.Now().Unix())
+			os.WriteFile(bak, old, 0o600)
+			log.Printf("dev mode: previous unseal key kept in %s", bak)
+		}
 		if err := os.WriteFile(keyFile, []byte(res.Keys[0]+"\n"), 0o600); err != nil {
 			return err
 		}
@@ -375,7 +381,20 @@ func (s *Server) devInit() error {
 		return nil
 	}
 	if err := s.autoUnseal(keyFile); err != nil {
-		return fmt.Errorf("dev mode: existing data in %s could not be auto-unsealed: %w", s.cfg.Dir, err)
+		baks, _ := filepath.Glob(keyFile + ".bak-*")
+		for i := len(baks) - 1; i >= 0; i-- { // try older dev keys (e.g. after restoring a snapshot)
+			if s.autoUnseal(baks[i]) == nil {
+				log.Printf("dev mode: unsealed with older key %s", baks[i])
+				if b, e := os.ReadFile(baks[i]); e == nil {
+					os.WriteFile(keyFile, b, 0o600)
+				}
+				err = nil
+				break
+			}
+		}
+		if err != nil {
+			return fmt.Errorf("dev mode: existing data in %s could not be auto-unsealed (the snapshot needs the unseal key that was valid when it was taken; unseal in the UI): %w", s.cfg.Dir, err)
+		}
 	}
 	if s.cfg.DevRootToken != "" {
 		s.Core.CreateRootToken(s.cfg.DevRootToken)

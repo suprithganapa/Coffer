@@ -968,7 +968,15 @@ func runSnapshot(c *client, args []string) error {
 		if fs.NArg() < 1 {
 			return errors.New("usage: coffer operator snapshot restore -dir=<data-dir> <file>")
 		}
-		f, err := os.Open(fs.Arg(0))
+		file := fs.Arg(0)
+		// PowerShell may split "-dir=.\\x" at the dot, leaving the folder as the first argument
+		if st, err := os.Stat(file); err == nil && st.IsDir() {
+			if fs.NArg() < 2 {
+				return fmt.Errorf("%s is a folder, not a snapshot file; usage: coffer operator snapshot restore -dir=<data-dir> <file>", file)
+			}
+			*dir, file = file, fs.Arg(1)
+		}
+		f, err := os.Open(file)
 		if err != nil {
 			return err
 		}
