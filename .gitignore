@@ -1,0 +1,4 @@
+bin/
+coffer-data/
+coffer-dev/
+*.log

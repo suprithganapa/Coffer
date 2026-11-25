@@ -1,0 +1,51 @@
+# A small production-shaped cluster: one master, three volume servers on two
+# racks, and one Coffer gateway (secrets + filer + S3 + UI).
+#
+#   export COFFER_CLUSTER_SECRET=$(openssl rand -hex 24)
+#   docker compose up -d
+#   open http://localhost:8200/ui/   (initialize and unseal there)
+x-secret: &secret
+  COFFER_CLUSTER_SECRET: ${COFFER_CLUSTER_SECRET:?set COFFER_CLUSTER_SECRET}
+
+services:
+  master:
+    build: .
+    command: ["master", "-dir=/data", "-defaultReplication=010", "-volumeSizeLimitMB=1024"]
+    environment: *secret
+    volumes: ["master:/data"]
+
+  volume1:
+    build: .
+    command: ["volume", "-dir=/data", "-ip=volume1", "-port=8080", "-master=master:9333", "-rack=rack-a", "-max=32"]
+    environment: *secret
+    volumes: ["vol1:/data"]
+    depends_on: [master]
+
+  volume2:
+    build: .
+    command: ["volume", "-dir=/data", "-ip=volume2", "-port=8080", "-master=master:9333", "-rack=rack-b", "-max=32"]
+    environment: *secret
+    volumes: ["vol2:/data"]
+    depends_on: [master]
+
+  volume3:
+    build: .
+    command: ["volume", "-dir=/data", "-ip=volume3", "-port=8080", "-master=master:9333", "-rack=rack-b", "-max=32"]
+    environment: *secret
+    volumes: ["vol3:/data"]
+    depends_on: [master]
+
+  coffer:
+    build: .
+    command: ["server", "-dir=/data", "-master=master:9333", "-volume.disable", "-replication=010", "-public-url=http://localhost:8200"]
+    environment: *secret
+    ports: ["8200:8200", "8333:8333"]
+    volumes: ["gateway:/data"]
+    depends_on: [master, volume1, volume2, volume3]
+
+volumes:
+  master: {}
+  vol1: {}
+  vol2: {}
+  vol3: {}
+  gateway: {}
